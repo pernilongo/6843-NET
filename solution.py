@@ -1,35 +1,60 @@
-### welcome_assignment_answers
-### Input - All eight questions given in the assignment.
-### Output - The right answer for the specific question.
+from socket import *
+import sys
 
-def welcome_assignment_answers(question):
-	#The student doesn't have to follow the skeleton for this assignment.
-	#Another way to implement is using a "case" statements similar to C.
 
-	if question == "In Slack, what is the secret passphrase posted in the #cyberfellows-computernetworking-fall2021 channel posted by a TA?":
-		answer = "mTLS"
-	elif question == "Are encoding and encryption the same? - Yes/No":
-		answer = "no"
-	elif question == "Is it possible to decrypt a message without a key? - Yes/No":
-		answer = "no"
-	elif question == "Is it possible to decode a message without a key? - Yes/No":
-		answer = "yes"
-	elif question == "Is a hashed message supposed to be un-hashed? - Yes/No":
-		answer = "no"
-	elif question == "What is the MD5 hashing value to the following message: 'NYU Computer Networking' - Use MD5 hash generator and use the answer in your code":
-		answer = "42b76fe51778764973077a5a94056724"
-	elif question == "Is MD5 a secured hashing algorithm? - Yes/No":
-		answer = "no"
-	elif question == "What layer from the TCP/IP model the protocol DHCP belongs to? - The answer should be a numeric number":
-		answer = 5
-	elif question == "What layer of the TCP/IP model the protocol TCP belongs to? - The answer should be a numeric number":
-		answer = 4
-	return(answer)
+def readFile(filename):
+	f = open(filename)
+	outputdata = f.read()
+	f.close()
+	return outputdata
 
-# Complete all the questions.
+def send(connectionSocket, msg):
+	size = len(msg)
+	sent = connectionSocket.send(msg.encode())
+	print(msg, size, sent)
+
+def handleConnection(connectionSocket, addr):
+	try:
+		message = connectionSocket.recv(4096)
+		filename = message.split()[1]
+		try:
+			outputdata = readFile(filename[1:])
+			#Send one HTTP header line into socket.
+			print(filename[1:], len(outputdata))
+			send(connectionSocket, "HTTP/1.1 200 OK\r\n")
+			send(connectionSocket, ("Content-Length: " + str(len(outputdata))) + "\r\n")
+			send(connectionSocket, "\r\n")
+			#Send the content of the requested file to the client
+			send(connectionSocket, outputdata)
+		except IOError as error:
+			print(error)
+			# Send response message for file not found (404)
+			send(connectionSocket, "HTTP/1.1 404 File Not Found\r\n")
+
+		#Close client socket
+		connectionSocket.close()
+		print('Sent')
+	except (ConnectionResetError, BrokenPipeError) as ex:
+		print(ex)
+
+
+def webServer(port=13331):
+	serverSocket = socket(AF_INET, SOCK_STREAM)
+
+	#Prepare a server socket
+	serverSocket.bind(("", port))
+
+	serverSocket.listen()
+
+	while True:
+		#Establish the connection
+		print('Ready to serve...')
+		connectionSocket, addr = serverSocket.accept()
+		handleConnection(connectionSocket, addr)
+
+	serverSocket.close()
+	sys.exit()	# Terminate the program after sending the corresponding data
 
 
 if __name__ == "__main__":
-	#use this space to debug and verify that the program works
-	debug_question = "Are encoding and encryption the same? - Yes/No"
-	print(welcome_assignment_answers(debug_question))
+	webServer(13331)
