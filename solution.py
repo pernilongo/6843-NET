@@ -1,60 +1,47 @@
+
 from socket import *
-import sys
+
+def assert_response(resp, code):
+	print(resp)
+	if resp[:3] != code:
+		print(code, 'reply not received from server.')
+
+def send_cmd(cmd, client_socket):
+	cmd = cmd + '\r\n'
+	client_socket.send(cmd.encode())
+	resp = client_socket.recv(1024).decode()
+	return resp
+
+def send_email(from_addr, to_addrs, msg, client_socket):
+	assert_response(send_cmd('MAIL FROM: ' + from_addr, client_socket), '250')
+	assert_response(send_cmd('RCPT TO: ' + to_addrs, client_socket), '250')
+	assert_response(send_cmd('DATA', client_socket), '354')
+	send_cmd(msg, client_socket)
+	assert_response(send_cmd('.', client_socket), '250')
 
 
-def read_file(filename):
-	f = open(filename)
-	outputdata = f.read()
-	f.close()
-	return outputdata
+def smtp_client(port=1025, mailserver='127.0.0.1'):
+	msg = "\r\n My message"
+	endmsg = "\r\n.\r\n"
 
-def send(connection_socket, msg):
-	size = len(msg)
-	sent = connection_socket.send(msg.encode())
-	print(msg, size, sent)
+	# Choose a mail server (e.g. Google mail server) if you want to verify the script beyond GradeScope
 
-def handle_connection(connection_socket, addr):
-	try:
-		message = connection_socket.recv(4096)
-		filename = message.split()[1]
-		try:
-			outputdata = read_file(filename[1:])
-			#Send one HTTP header line into socket.
-			print(filename[1:], len(outputdata))
-			send(connection_socket, "HTTP/1.1 200 OK\r\n")
-			send(connection_socket, ("Content-Length: " + str(len(outputdata))) + "\r\n")
-			send(connection_socket, "\r\n")
-			#Send the content of the requested file to the client
-			send(connection_socket, outputdata)
-		except IOError as error:
-			print(error)
-			# Send response message for file not found (404)
-			send(connection_socket, "HTTP/1.1 404 File Not Found\r\n")
+	# Create socket called clientSocket and establish a TCP connection with mailserver and port
 
-		#Close client socket
-		connection_socket.close()
-		print('Sent')
-	except (ConnectionResetError, BrokenPipeError) as ex:
-		print(ex)
+	# Fill in start
+	# Fill in end
+
+	resp = clientSocket.recv(1024).decode()
+	assert_response(resp, '220')
+
+	# Send HELO command and print server response.
+	assert_response(send_cmd('HELO Alice', clientSocket), '250')
+
+	send_email('juan.rovirosa@nyu.edu', 'juan.rovirosa@gmail.com', 'Testing SMTP client program', clientSocket)
+
+	# Send QUIT command and get server response.
+	assert_response(send_cmd('QUIT', clientSocket), '250')
 
 
-def web_server(port=13331):
-	server_socket = socket(AF_INET, SOCK_STREAM)
-
-	#Prepare a server socket
-	server_socket.bind(("", port))
-
-	server_socket.listen()
-
-	while True:
-		#Establish the connection
-		print('Ready to serve...')
-		connection_socket, addr = server_socket.accept()
-		handle_connection(connection_socket, addr)
-
-	serverSocket.close()
-	sys.exit()	# Terminate the program after sending the corresponding data
-
-
-if __name__ == "__main__":
-	web_server(13331)
+if __name__ == '__main__':
+	smtp_client(1025, '127.0.0.1')
